@@ -56,6 +56,6 @@
     <node pkg="panda_simulation" type="robot_state_initializer_node" name="robot_state_initializer_node" />
 
     <!-- run custom node for AB conrol -->
-    <node pkg="panda_simulation" type="robot_ab_control_node" name="robot_ab_control_node"/>
+    <node pkg="panda_simulation" type="robot_ab_control_node" name="robot_ab_control_node" output="screen"/>
 
 </launch>

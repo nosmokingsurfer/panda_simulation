@@ -1,5 +1,4 @@
 #include <ros/ros.h>
-#include <string>
 
 #include <eigen_conversions/eigen_msg.h>
 #include <moveit/move_group_interface/move_group_interface.h>
@@ -26,31 +25,73 @@ int main(int argc, char** argv)
   const robot_state::JointModelGroup* joint_model_group =
       move_group.getCurrentState()->getJointModelGroup(PLANNING_GROUP);
 
-  for (int i = 0; i < 5; i++)
+  // TASK 1
+  int N = 5;
+  for (int i = 0; i < N; i++)
   {
-    visual_tools.prompt("Press next to start task_1");
-    ROS_INFO("Step number %i", i);
+    visual_tools.prompt("Press next to continue TASK_1\n");
+    visual_tools.deleteAllMarkers();
 
-    // Picking up new random state in joint space
-    robot_state::RobotStatePtr new_state(new robot_state::RobotState(*move_group.getCurrentState()));
-    new_state->setToRandomPositions(joint_model_group);
+    ROS_INFO("Step number %i/%i", i + 1, N);
 
-    Eigen::Isometry3d end_effector = new_state->getGlobalLinkTransform("panda_link8");
-    ROS_INFO("Next point to plan to : %s", end_effector);
+    // current pose of end effector
+    Eigen::Isometry3d cur_end_effector = move_group.getCurrentState()->getGlobalLinkTransform("panda_link8");
+    geometry_msgs::PoseStamped cur_pose;
+    tf::poseEigenToMsg(cur_end_effector, cur_pose.pose);
+    visual_tools.publishAxisLabeled(cur_pose.pose, "A", rviz_visual_tools::LARGE);
 
-    geometry_msgs::PoseStamped trg_pose;
-    tf::poseEigenToMsg(end_effector, trg_pose.pose);
+    // RANDOM POINTS OBTAINED FROM TASK SPACE
+    geometry_msgs::PoseStamped trg_pose = move_group.getRandomPose("panda_link8");
+    ROS_INFO_STREAM("Next point to plan to : \nt = \n"
+                    << trg_pose.pose.position << "\nR = \n"
+                    << trg_pose.pose.orientation);
+    visual_tools.publishAxisLabeled(trg_pose.pose, "B", rviz_visual_tools::LARGE);
+    visual_tools.trigger();
 
-    move_group.setPoseTarget(trg_pose);
+    // setting target pose for move_group
+    move_group.setPoseTarget(trg_pose, "panda_link8");
 
+    // do the planning
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
-
     bool success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    ROS_INFO("Planning state = %s", success ? "" : "FAILED");
+    ROS_INFO("Planning state = %s", success ? "SUCCESS" : "FAILED");
 
+    // trajectory visualization
     visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
+    visual_tools.trigger();
+
+    // executing planned trajectory
     move_group.execute(my_plan);
   }
+
+  visual_tools.prompt("Press next to finish TASK_1 and return manipulator home\n");
+  ROS_INFO("Returning home...");
+  visual_tools.deleteAllMarkers();
+
+  geometry_msgs::Pose home_pose;
+  home_pose.position.x = 0.5;
+  home_pose.position.y = 0;
+  home_pose.position.z = 0.5;
+  home_pose.orientation.w = 1.0;
+  visual_tools.publishAxisLabeled(home_pose, "HOME", rviz_visual_tools::LARGE);
+
+  ROS_INFO_STREAM("Next point to plan to : \nt = \n" << home_pose.position << "\nR = \n" << home_pose.orientation);
+
+  moveit::core::RobotState home_state(*move_group.getCurrentState());
+  home_state.setFromIK(joint_model_group, home_pose, 10, 0.2);
+
+  move_group.setJointValueTarget(home_state);
+  moveit::planning_interface::MoveGroupInterface::Plan my_plan;
+  bool success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+  ROS_INFO("Planning state = %s", success ? "SUCCESS" : "FAILED");
+
+  // trajectory visualization
+  visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
+  visual_tools.trigger();
+
+  // executing planned trajectory
+  move_group.execute(my_plan);
+  ROS_INFO("Done");
 
   ros::waitForShutdown();
   return 0;
