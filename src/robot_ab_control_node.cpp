@@ -4,9 +4,38 @@
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
 
+#include <control_msgs/FollowJointTrajectoryActionFeedback.h>
+
+#include <fstream>
+
+#include <boost/bind.hpp>
+
 static const std::string PLANNING_GROUP = "panda_arm";
 
-int main(int argc, char** argv)
+void feedbackCallBack(const boost::shared_ptr<control_msgs::FollowJointTrajectoryActionFeedback const> msg,
+                      moveit::planning_interface::MoveGroupInterface &group)
+{
+  std::ofstream output;
+  output.open("../../../src/panda_simulation/error.txt", std::ios::app);
+  auto &actual = msg->feedback.actual;
+  auto &desired = msg->feedback.desired;
+
+  auto kinematic_model = group.getRobotModel();
+  robot_state::RobotState state(kinematic_model);
+
+  state.setJointGroupPositions(kinematic_model->getJointModelGroup("panda_arm"), desired.positions);
+  Eigen::Affine3d eff = state.getGlobalLinkTransform("panda_link8");
+  output << msg->feedback.header.seq << " " << eff.translation()[0] << " " << eff.translation()[1] << " "
+         << eff.translation()[2] << " ";
+
+  state.setJointGroupPositions(kinematic_model->getJointModelGroup("panda_arm"), actual.positions);
+  eff = state.getGlobalLinkTransform("panda_link8");
+  output << eff.translation()[0] << " " << eff.translation()[1] << " " << eff.translation()[2] << "\n";
+
+  output.close();
+}
+
+int main(int argc, char **argv)
 {
   ROS_INFO("RUNNING robot_ab_control_node");
   ros::init(argc, argv, "robot_ab_control_node");
@@ -22,7 +51,14 @@ int main(int argc, char** argv)
 
   moveit::planning_interface::MoveGroupInterface move_group(PLANNING_GROUP);
 
-  const robot_state::JointModelGroup* joint_model_group =
+  ros::Subscriber gazebo_feedback = node_handle.subscribe<control_msgs::FollowJointTrajectoryActionFeedback>(
+      "/panda_arm_controller/follow_joint_trajectory/feedback", 1,
+      boost::bind(feedbackCallBack, _1, boost::ref(move_group)));
+
+  // deleting previous file with errors
+  std::remove("../../../src/panda_simulation/error.txt");
+
+  const robot_state::JointModelGroup *joint_model_group =
       move_group.getCurrentState()->getJointModelGroup(PLANNING_GROUP);
 
   // TASK 1
