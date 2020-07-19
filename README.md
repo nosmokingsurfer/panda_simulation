@@ -1,3 +1,8 @@
+# Small report and instruction can be found here
+https://docs.google.com/document/d/11DlZVxMhXGZ6MqaFFZrkBQxJnhDYuftRKedhnUqJOmg/edit
+
+
+
 # panda_simulation
 
 ![Panda in Gazebo](assets/panda-in-gazebo.png?raw=true "Panda in Gazebo")
