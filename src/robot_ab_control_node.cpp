@@ -15,22 +15,42 @@ static const std::string PLANNING_GROUP = "panda_arm";
 void feedbackCallBack(const boost::shared_ptr<control_msgs::FollowJointTrajectoryActionFeedback const> msg,
                       moveit::planning_interface::MoveGroupInterface &group)
 {
+  // opening csv file to store the data
   std::ofstream output;
-  output.open("../../../src/panda_simulation/error.txt", std::ios::app);
+  output.open("../../../src/panda_simulation/error.csv", std::ios::app);
+
+  // points from feeedback message from gazebo
   auto &actual = msg->feedback.actual;
   auto &desired = msg->feedback.desired;
 
+  // getting kinematic model for forward kinematics
   auto kinematic_model = group.getRobotModel();
   robot_state::RobotState state(kinematic_model);
 
+  // writing desired pose of the end effector
   state.setJointGroupPositions(kinematic_model->getJointModelGroup("panda_arm"), desired.positions);
   Eigen::Affine3d eff = state.getGlobalLinkTransform("panda_link8");
   output << msg->feedback.header.seq << " " << eff.translation()[0] << " " << eff.translation()[1] << " "
          << eff.translation()[2] << " ";
 
+  // writing actual pose of the end effector
   state.setJointGroupPositions(kinematic_model->getJointModelGroup("panda_arm"), actual.positions);
   eff = state.getGlobalLinkTransform("panda_link8");
-  output << eff.translation()[0] << " " << eff.translation()[1] << " " << eff.translation()[2] << "\n";
+  output << eff.translation()[0] << " " << eff.translation()[1] << " " << eff.translation()[2] << " ";
+
+  // writing desired joint positions
+  for (const auto &j : desired.positions)
+  {
+    output << j << " ";
+  }
+
+  // writing actual joint positions
+  for (const auto &j : actual.positions)
+  {
+    output << j << " ";
+  }
+
+  output << "\n";
 
   output.close();
 }
@@ -45,18 +65,21 @@ int main(int argc, char **argv)
 
   ros::NodeHandle node_handle;
 
+  // creating visual tools instance to be able control test from rviz motion planning tab
   moveit_visual_tools::MoveItVisualTools visual_tools("panda_link0");
   visual_tools.deleteAllMarkers();
   visual_tools.loadRemoteControl();
 
+  // creating move group for panda manipulator
   moveit::planning_interface::MoveGroupInterface move_group(PLANNING_GROUP);
 
+  // subscribing to gazebo feedback messages which contain trajectory information
   ros::Subscriber gazebo_feedback = node_handle.subscribe<control_msgs::FollowJointTrajectoryActionFeedback>(
       "/panda_arm_controller/follow_joint_trajectory/feedback", 1,
       boost::bind(feedbackCallBack, _1, boost::ref(move_group)));
 
-  // deleting previous file with errors
-  std::remove("../../../src/panda_simulation/error.txt");
+  // cleaning previous file with errors
+  std::remove("../../../src/panda_simulation/error.csv");
 
   const robot_state::JointModelGroup *joint_model_group =
       move_group.getCurrentState()->getJointModelGroup(PLANNING_GROUP);
@@ -104,6 +127,7 @@ int main(int argc, char **argv)
   ROS_INFO("Returning home...");
   visual_tools.deleteAllMarkers();
 
+  // moving manipulator to home position
   geometry_msgs::Pose home_pose;
   home_pose.position.x = 0.5;
   home_pose.position.y = 0;
