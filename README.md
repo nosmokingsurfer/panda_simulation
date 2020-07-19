@@ -1,9 +1,54 @@
-# Small report and instruction can be found here
-https://docs.google.com/document/d/11DlZVxMhXGZ6MqaFFZrkBQxJnhDYuftRKedhnUqJOmg/edit
+# Problem Description
+* Control the Franka Panda robot to move from position A to position B. You need to use inverse kinematics to solve for the joint space values. Then apply the trajectory planning method such that the robot can move smoothly for this task. Basically, you can follow this website to complete this task: https://erdalpekel.de/?p=55
+* (not done) Control the Franka Panda robot such that the robot end-effector can move on a ball with an arbitrary radius. To be more specific, the robot end-effector position is on the ball surface and the z-axis of its end effector is perpendicular to the ball surface. If the robot is not able to cover the completed ball surface with the desired position & orientation, it is fine to control the robot to cover part of the ball surface.
+
+# Restrictions
+ feel free to select the ROS versions
+
+# Output result
+* send the video
+* the C++ code. I forked from repo from website https://github.com/erdalpekel/panda_simulation.git  and added my code into the following repo https://github.com/nosmokingsurfer/panda_simulation. All the code is in the node called [robot_ab_control_node.cpp](https://github.com/nosmokingsurfer/panda_simulation/blob/master/src/robot_ab_control_node.cpp)
+* Plot of joint value for motor 1-7 in both tasks
+* Task space position error in x-, y-, and z- direction in both tasks
+* Task space orientation error in task 2
+
+
+# My setup:
+* Ubuntu 18.04
+* ROS Melodic + catkin tools + moveit http://docs.ros.org/melodic/api/moveit_tutorials/html/doc/getting_started/getting_started.html#install-ros-and-catkin
+* VisualCode IDE + compile_command.json used for Intellisense syntax highlighting and autocompletion
+* Libfranca and franca_ros - build from source. https://frankaemika.github.io/docs/installation_linux.html
+* Pabda_simulation repo was forked from repo: https://github.com/erdalpekel/panda_simulation
+* The catkin workspace was configured as follows:
+![catkin](assets/catkin_config.png)
+
+## To run the experiment:
+```
+roslaunch panda_simulation task1_ab_control.launch
+```
+In RViz window you can press `Next` or `Continue` buttons like in the following video:
+
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=_5eIY0zyKI0
+" target="_blank"><img src="http://img.youtube.com/vi/_5eIY0zyKI0/0.jpg" 
+alt="experiment video" width="640" height="480" border="10" /></a>
+
+Experiment contains 5 random points from task space and drives the panda_arm to home position in the end;
+
+## Plots
+To plot the plots the `errors.csv` file required - it is automatically generated from experiment. There is one I've commited for example.
+To plot use the following command:
+```
+python plot.py
+```
+The following figures should appear:
 
 ![task1](assets/task_1_joints.png)
+
 ![task1](assets/task_1_errors.png)
 
+
+# Down below is the original instruction for panda_simulation package
+---------------------------------------------------------------------
 
 # panda_simulation
 
