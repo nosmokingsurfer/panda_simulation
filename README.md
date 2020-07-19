@@ -1,6 +1,8 @@
 # Small report and instruction can be found here
 https://docs.google.com/document/d/11DlZVxMhXGZ6MqaFFZrkBQxJnhDYuftRKedhnUqJOmg/edit
 
+![task1](assets/task_1_joints.png)
+![task1](assets/task_1_errors.png)
 
 
 # panda_simulation
