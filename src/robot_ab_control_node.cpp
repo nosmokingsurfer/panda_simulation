@@ -3,6 +3,7 @@
 #include <eigen_conversions/eigen_msg.h>
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
+#include <moveit_msgs/PlanningScene.h>
 
 #include <control_msgs/FollowJointTrajectoryActionFeedback.h>
 
@@ -72,6 +73,51 @@ int main(int argc, char **argv)
 
   // creating move group for panda manipulator
   moveit::planning_interface::MoveGroupInterface move_group(PLANNING_GROUP);
+  
+  // creating move group planning scene publisher
+  ros::Publisher planning_scene_diff_publisher = node_handle.advertise<moveit_msgs::PlanningScene>("planning_scene",1);
+  ros::WallDuration sleep_t(0.5);
+  while(planning_scene_diff_publisher.getNumSubscribers() < 1)
+  {
+    sleep_t.sleep();
+  }
+  moveit_msgs::PlanningScene planning_scene;
+
+  // adding collision object
+  moveit_msgs::CollisionObject collision_object;
+  collision_object.header.frame_id = "world";
+  collision_object.id = "ground";
+
+  shape_msgs::SolidPrimitive primitive;
+  primitive.type = primitive.BOX;
+  primitive.dimensions.resize(3);
+  primitive.dimensions[0] = 10.0;
+  primitive.dimensions[1] = 10.0;
+  primitive.dimensions[2] = 1.0;
+
+  geometry_msgs::Pose floor_pose;
+  floor_pose.orientation.w = 1;
+  floor_pose.orientation.x = 0;
+  floor_pose.orientation.y = 0;
+  floor_pose.orientation.z = 0;
+
+  floor_pose.position.x = 0;
+  floor_pose.position.y = 0;
+  floor_pose.position.z = -0.5*primitive.dimensions[2];
+
+  collision_object.primitives.push_back(primitive);
+  collision_object.primitive_poses.push_back(floor_pose);
+  collision_object.operation = collision_object.ADD;
+
+  collision_object.header.frame_id = move_group.getPlanningFrame();
+  planning_scene.world.collision_objects.push_back(collision_object);
+  planning_scene.is_diff = true;
+  planning_scene_diff_publisher.publish(planning_scene);
+
+
+
+  
+
 
   // subscribing to gazebo feedback messages which contain trajectory information
   ros::Subscriber gazebo_feedback = node_handle.subscribe<control_msgs::FollowJointTrajectoryActionFeedback>(
